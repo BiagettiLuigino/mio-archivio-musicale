@@ -2,115 +2,70 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Music Studio Biagetti - Mobile Fix</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Studio - Biagetti</title>
     <style>
         :root { --primary: #00d4ff; --bg: #121212; --panel: #1e1e1e; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: #fff; display: flex; height: 100vh; overflow: hidden; }
         
         #sidebar { width: 300px; min-width: 300px; background: var(--panel); border-right: 2px solid var(--primary); display: flex; flex-direction: column; padding: 15px; }
-        #playlist { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 10px 0; }
-        #playlist li { padding: 12px; border-bottom: 1px solid #333; cursor: pointer; font-size: 0.9rem; border-radius: 4px; }
-        #playlist li.active { background: #005bb5; color: white; font-weight: bold; }
-
-        #main-viewer { flex-grow: 1; background: #333; position: relative; }
-        /* Questo contenitore assicura che il PDF occupi tutto lo spazio */
-        .pdf-container { width: 100%; height: 100%; border: none; }
-
-        .controls { background: #181818; padding: 15px; border-top: 1px solid #444; border-radius: 10px; }
-        audio { width: 100%; }
         
-        .loop-row { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; font-size: 0.8rem; }
-        input { width: 60px; background: #000; color: var(--primary); border: 1px solid #444; text-align: center; padding: 5px; }
-        #loopBtn { width: 100%; padding: 10px; border: none; border-radius: 6px; cursor: pointer; background: #444; color: white; font-weight: bold; }
-        #loopBtn.active { background: #d32f2f; }
-
-        /* Messaggio per Tablet se il PDF non carica */
-        #mobile-hint { display: none; position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; font-size: 0.8rem; }
-
-        @media (max-width: 800px) {
-            body { flex-direction: column; }
-            #sidebar { width: 100%; height: 40%; border-right: none; border-bottom: 2px solid var(--primary); }
+        /* PULSANTE TABLET */
+        .tablet-link { 
+            background: #ff9800; color: black; text-decoration: none; text-align: center; 
+            padding: 10px; border-radius: 5px; font-weight: bold; margin-bottom: 15px; 
         }
+
+        #playlist { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 10px 0; }
+        #playlist li { padding: 12px; border-bottom: 1px solid #333; cursor: pointer; font-size: 0.9rem; }
+        #playlist li.active { background: #005bb5; color: white; }
+
+        #main-viewer { flex-grow: 1; background: #333; }
+        iframe { width: 100%; height: 100%; border: none; }
+
+        .controls { background: #181818; padding: 15px; border-top: 1px solid #444; }
+        audio { width: 100%; }
     </style>
 </head>
 <body>
 
     <div id="sidebar">
-        <h2 style="color:var(--primary); text-align:center; margin-top:0;">ARCHIVIO</h2>
+        <a href="tablet.html" class="tablet-link">USA VERSIONE TABLET 📱</a>
+        <h2 style="color:var(--primary); text-align:center; margin-top:0;">ARCHIVIO PC</h2>
         <ul id="playlist"></ul>
         <div class="controls">
             <audio id="player" controls></audio>
-            <div class="loop-row">
-                <label>Inizio: <input type="number" id="start" value="0"></label>
-                <label>Fine: <input type="number" id="end" value="30"></label>
-            </div>
-            <button id="loopBtn" onclick="toggleLoop()">LOOP OFF</button>
         </div>
     </div>
 
     <div id="main-viewer">
-        <div id="mobile-hint">Se non vedi il PDF, tocca di nuovo il titolo</div>
-        <embed id="pdf-content" src="" type="application/pdf" class="pdf-container">
+        <iframe id="pdf-content" src=""></iframe>
     </div>
 
     <script>
         const UTENTE = "BiagettiLuigino";
         const REPO = "mio-archivio-musicale";
-        const player = document.getElementById('player');
-        const pdfContent = document.getElementById('pdf-content');
-        let isLooping = false;
 
         async function init() {
-            try {
-                const response = await fetch(`https://api.github.com/repos/${UTENTE}/${REPO}/contents/`);
-                const files = await response.json();
-                const list = document.getElementById('playlist');
-                
-                const audioFiles = files.filter(f => f.name.toLowerCase().endsWith('.mp3') || f.name.toLowerCase().endsWith('.mpeg'));
-                
-                audioFiles.sort((a,b) => a.name.localeCompare(b.name)).forEach(file => {
-                    const baseName = file.name.replace(/\.[^/.]+$/, "");
-                    const li = document.createElement('li');
-                    li.innerText = baseName.replace(/_/g, " ");
-                    li.onclick = () => {
-                        document.querySelectorAll('li').forEach(l => l.classList.remove('active'));
-                        li.classList.add('active');
-                        
-                        // Generiamo l'URL del PDF
-                        const pdfUrl = `https://${UTENTE}.github.io/${REPO}/${encodeURIComponent(baseName)}.pdf`;
-                        
-                        // TRUCCO PER TABLET: Reset del tag embed per forzare il ricaricamento
-                        const newEmbed = pdfContent.cloneNode(true);
-                        newEmbed.src = pdfUrl;
-                        pdfContent.parentNode.replaceChild(newEmbed, pdfContent);
-                        
-                        // Per i browser molto vecchi o restrittivi, mostriamo un avviso
-                        document.getElementById('mobile-hint').style.display = 'block';
-
-                        player.src = encodeURI(file.name);
-                        player.play();
-                    };
-                    list.appendChild(li);
-                });
-            } catch (e) { console.error(e); }
+            const response = await fetch(`https://api.github.com/repos/${UTENTE}/${REPO}/contents/`);
+            const files = await response.json();
+            const list = document.getElementById('playlist');
+            
+            files.filter(f => f.name.toLowerCase().endsWith('.mp3')).forEach(file => {
+                const baseName = file.name.replace(".mp3", "");
+                const li = document.createElement('li');
+                li.innerText = baseName.replace(/_/g, " ");
+                li.onclick = () => {
+                    document.querySelectorAll('li').forEach(l => l.classList.remove('active'));
+                    li.classList.add('active');
+                    document.getElementById('pdf-content').src = encodeURI(baseName + ".pdf");
+                    const player = document.getElementById('player');
+                    player.src = encodeURI(file.name);
+                    player.play();
+                };
+                list.appendChild(li);
+            });
         }
-
-        function toggleLoop() {
-            isLooping = !isLooping;
-            const btn = document.getElementById('loopBtn');
-            btn.classList.toggle('active');
-            btn.innerText = isLooping ? "LOOP ATTIVO" : "LOOP OFF";
-        }
-
-        player.ontimeupdate = () => {
-            if (isLooping) {
-                const s = parseFloat(document.getElementById('start').value);
-                const e = parseFloat(document.getElementById('end').value);
-                if (player.currentTime >= e) player.currentTime = s;
-            }
-        };
-
         window.onload = init;
     </script>
 </body>
