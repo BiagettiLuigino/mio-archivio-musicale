@@ -2,122 +2,91 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Archivio Musicale - Biagetti Luigino</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Music Station - Mobile Ready</title>
     <style>
-        :root { --primary: #00d4ff; --bg: #121212; --panel: #1e1e1e; --text: #e0e0e0; }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; }
+        :root { --primary: #00d4ff; --bg: #121212; --panel: #1e1e1e; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); color: #fff; display: flex; height: 100vh; overflow: hidden; }
         
         /* Sidebar */
-        #sidebar { width: 320px; min-width: 320px; background: var(--panel); border-right: 2px solid var(--primary); display: flex; flex-direction: column; padding: 15px; }
-        #sidebar h2 { font-size: 1.2rem; color: var(--primary); text-align: center; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; }
-        #search { width: 100%; padding: 10px; background: #333; border: 1px solid #444; color: white; border-radius: 6px; margin: 15px 0; outline: none; }
-        
+        #sidebar { width: 280px; min-width: 280px; background: var(--panel); border-right: 2px solid var(--primary); display: flex; flex-direction: column; padding: 10px; }
         #playlist { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
-        #playlist li { padding: 12px; border-bottom: 1px solid #2a2a2a; cursor: pointer; font-size: 0.85rem; border-radius: 4px; }
-        #playlist li:hover { background: #333; color: var(--primary); }
-        #playlist li.active { background: #005bb5; color: white; font-weight: bold; }
+        #playlist li { padding: 12px; border-bottom: 1px solid #333; cursor: pointer; font-size: 0.85rem; }
+        #playlist li.active { background: #005bb5; font-weight: bold; }
 
-        /* Main Content (PDF) */
-        #main-viewer { flex-grow: 1; background: #2c2c2c; display: flex; }
-        iframe { width: 100%; height: 100%; border: none; background: #fff; }
+        /* Main Viewer (Mobile Friendly) */
+        #main-viewer { flex-grow: 1; background: #2c2c2c; position: relative; overflow-y: auto; }
+        /* Usiamo un trucco per forzare la visualizzazione PDF su mobile */
+        object, embed { width: 100%; height: 100%; min-height: 100vh; }
 
         /* Controls */
-        .controls { background: #252525; padding: 15px; border-radius: 10px; margin-top: 15px; box-shadow: 0 -5px 10px rgba(0,0,0,0.3); }
-        audio { width: 100%; margin-bottom: 10px; }
-        .loop-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.8rem; }
-        input[type="number"] { width: 65px; background: #121212; color: var(--primary); border: 1px solid #444; text-align: center; padding: 5px; border-radius: 4px; }
-        #loopBtn { width: 100%; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; background: #444; color: white; text-transform: uppercase; }
+        .controls { background: #181818; padding: 10px; border-top: 1px solid #444; }
+        audio { width: 100%; height: 35px; }
+        .loop-row { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; font-size: 0.75rem; }
+        input { width: 50px; background: #000; color: var(--primary); border: 1px solid #444; text-align: center; }
+        #loopBtn { width: 100%; margin-top: 8px; padding: 8px; border: none; border-radius: 4px; cursor: pointer; background: #444; color: white; }
         #loopBtn.active { background: #d32f2f; }
-        
-        #loading-msg { text-align: center; font-size: 0.9rem; color: var(--primary); }
+
+        /* Responsive per cellulari stretti */
+        @media (max-width: 600px) {
+            body { flex-direction: column; }
+            #sidebar { width: 100%; height: 40%; border-right: none; border-bottom: 2px solid var(--primary); }
+        }
     </style>
 </head>
 <body>
 
     <div id="sidebar">
-        <h2>I MIEI CANTI</h2>
-        <input type="text" id="search" placeholder="Cerca brano..." onkeyup="filterList()">
-        
-        <div id="loading-msg">Caricamento archivio...</div>
+        <h3 style="color:var(--primary); text-align:center; margin: 5px 0;">ARCHIVIO</h3>
         <ul id="playlist"></ul>
-
         <div class="controls">
             <audio id="player" controls></audio>
             <div class="loop-row">
-                <span>Inizio Loop (s)</span>
-                <input type="number" id="start" value="0" step="0.5">
-            </div>
-            <div class="loop-row">
-                <span>Fine Loop (s)</span>
-                <input type="number" id="end" value="30" step="0.5">
+                <span>Loop: <input type="number" id="start" value="0"> a <input type="number" id="end" value="30">s</span>
             </div>
             <button id="loopBtn" onclick="toggleLoop()">Loop Off</button>
         </div>
     </div>
 
     <div id="main-viewer">
-        <iframe id="pdfViewer" src="about:blank"></iframe>
+        <iframe id="pdfViewer" src="" frameborder="0"></iframe>
     </div>
 
     <script>
-        // CONFIGURAZIONE GITHUB
         const UTENTE = "BiagettiLuigino";
         const REPO = "mio-archivio-musicale";
-        
-        const playlistElem = document.getElementById('playlist');
         const player = document.getElementById('player');
         const pdfViewer = document.getElementById('pdfViewer');
-        const loadingMsg = document.getElementById('loading-msg');
-        
         let isLooping = false;
 
-        // Funzione per caricare la lista file direttamente da GitHub
-        async function fetchGitHubFiles() {
-            try {
-                const response = await fetch(`https://api.github.com/repos/${UTENTE}/${REPO}/contents/`);
-                const files = await response.json();
-                
-                loadingMsg.style.display = "none";
-                
-                // Filtriamo i file audio (mp3 e mpeg)
-                const audioFiles = files.filter(f => f.name.toLowerCase().endsWith('.mp3') || f.name.toLowerCase().endsWith('.mpeg'));
-                
-                if (audioFiles.length === 0) {
-                    loadingMsg.style.display = "block";
-                    loadingMsg.innerText = "Nessun file audio trovato.";
-                    return;
-                }
-
-                audioFiles.sort((a, b) => a.name.localeCompare(b.name)).forEach(file => {
-                    const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
-                    const li = document.createElement('li');
-                    li.innerText = nameWithoutExt.replace(/_/g, " ");
-                    li.onclick = () => loadTrack(file.name, nameWithoutExt, li);
-                    playlistElem.appendChild(li);
-                });
-            } catch (error) {
-                loadingMsg.innerText = "Errore nel caricamento.";
-                console.error(error);
-            }
-        }
-
-        function loadTrack(audioFileName, baseName, element) {
-            document.querySelectorAll('#playlist li').forEach(el => el.classList.remove('active'));
-            element.classList.add('active');
-
-            // I file sono nella stessa cartella dell'index.html su GitHub Pages
-            player.src = encodeURI(audioFileName);
-            pdfViewer.src = encodeURI(baseName + ".pdf");
-
-            player.play();
+        async function fetchFiles() {
+            const response = await fetch(`https://api.github.com/repos/${UTENTE}/${REPO}/contents/`);
+            const files = await response.json();
+            const playlist = document.getElementById('playlist');
+            
+            files.filter(f => f.name.toLowerCase().endsWith('.mp3') || f.name.toLowerCase().endsWith('.mpeg')).forEach(file => {
+                const name = file.name.replace(/\.[^/.]+$/, "");
+                const li = document.createElement('li');
+                li.innerText = name.replace(/_/g, " ");
+                li.onclick = () => {
+                    document.querySelectorAll('li').forEach(l => l.classList.remove('active'));
+                    li.classList.add('active');
+                    
+                    // L'URL del PDF viene passato tramite il visualizzatore di Google per forzare l'apertura nel browser
+                    const pdfUrl = `https://${UTENTE}.github.io/${REPO}/${encodeURIComponent(name)}.pdf`;
+                    pdfViewer.src = `https://docs.google.com/viewer?url=${pdfUrl}&embedded=true`;
+                    
+                    player.src = encodeURI(file.name);
+                    player.play();
+                };
+                playlist.appendChild(li);
+            });
         }
 
         function toggleLoop() {
             isLooping = !isLooping;
-            const btn = document.getElementById('loopBtn');
-            btn.classList.toggle('active');
-            btn.innerText = isLooping ? "Loop Attivo" : "Loop Off";
+            document.getElementById('loopBtn').classList.toggle('active');
+            document.getElementById('loopBtn').innerText = isLooping ? "Loop Attivo" : "Loop Off";
         }
 
         player.ontimeupdate = () => {
@@ -128,16 +97,7 @@
             }
         };
 
-        function filterList() {
-            const val = document.getElementById('search').value.toLowerCase();
-            const items = playlistElem.getElementsByTagName('li');
-            for (let item of items) {
-                item.style.display = item.innerText.toLowerCase().includes(val) ? "" : "none";
-            }
-        }
-
-        // Avvio automatico
-        window.onload = fetchGitHubFiles;
+        window.onload = fetchFiles;
     </script>
 </body>
 </html>
