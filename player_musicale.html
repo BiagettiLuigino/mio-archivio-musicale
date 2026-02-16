@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Music Practice Station</title>
+    <style>
+        /* Reset e Struttura */
+        * { box-sizing: border-box; }
+        body { 
+            margin: 0; 
+            padding: 0; 
+            background: #121212; 
+            color: white; 
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+
+        /* Sidebar Sinistra (300px) */
+        #sidebar {
+            width: 300px;
+            min-width: 300px;
+            height: 100vh;
+            background: #1e1e1e;
+            border-right: 2px solid #00d4ff;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-shadow: 4px 0 10px rgba(0,0,0,0.5);
+        }
+
+        /* Area Spartito Destra (Tutto il resto) */
+        #main-viewer {
+            flex-grow: 1;
+            height: 100vh;
+            background: #2c2c2c;
+            display: flex;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block; /* Fondamentale per renderlo visibile */
+        }
+
+        /* Elementi Sidebar */
+        h2 { color: #00d4ff; font-size: 1.2rem; text-align: center; margin-top: 0; }
+        
+        .upload-area {
+            border: 2px dashed #444;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+        .upload-area:hover { border-color: #00d4ff; }
+
+        .control-group {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        label { display: block; font-size: 0.8rem; color: #aaa; margin-bottom: 5px; }
+        
+        input[type="number"], select {
+            width: 100%;
+            background: #121212;
+            color: #00d4ff;
+            border: 1px solid #444;
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        #loopBtn { background: #444; color: white; }
+        #loopBtn.active { background: #d32f2f; }
+
+        audio { width: 100%; margin-top: 10px; }
+
+        .status {
+            margin-top: auto;
+            font-size: 0.8rem;
+            color: #00d4ff;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h2>STUDIO PLAYER</h2>
+        
+        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+            <span id="loadText">CLICCA PER CARICARE<br>(PDF + MP3)</span>
+            <input type="file" id="fileInput" multiple accept=".pdf,.mp3,.mpeg" style="display:none">
+        </div>
+
+        <div class="control-group">
+            <audio id="audioPlayer" controls></audio>
+            
+            <label style="margin-top:10px">Velocità di riproduzione</label>
+            <select id="speedBtn" onchange="changeSpeed(this.value)">
+                <option value="0.5">0.5x (Molto Lento)</option>
+                <option value="0.75">0.75x (Lento)</option>
+                <option value="1" selected>1.0x (Normale)</option>
+                <option value="1.25">1.25x (Veloce)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Inizio Loop (sec)</label>
+            <input type="number" id="loopStart" value="0" step="0.5">
+            
+            <label>Fine Loop (sec)</label>
+            <input type="number" id="loopEnd" value="30" step="0.5">
+            
+            <button id="loopBtn" onclick="toggleLoop()">Loop: OFF</button>
+        </div>
+
+        <div id="status" class="status">Pronto all'uso.</div>
+    </div>
+
+    <div id="main-viewer">
+        <iframe id="pdfViewer" src="about:blank"></iframe>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const audio = document.getElementById('audioPlayer');
+        const pdf = document.getElementById('pdfViewer');
+        const status = document.getElementById('status');
+        const loopBtn = document.getElementById('loopBtn');
+        
+        let isLooping = false;
+
+        fileInput.addEventListener('change', function(e) {
+            const files = e.target.files;
+            let pdfFile = null;
+            let audioFile = null;
+
+            for (let file of files) {
+                if (file.type === "application/pdf") pdfFile = file;
+                if (file.type.includes("audio")) audioFile = file;
+            }
+
+            if (pdfFile && audioFile) {
+                // Genera URL temporanei per i file caricati
+                const pdfUrl = URL.createObjectURL(pdfFile);
+                const audioUrl = URL.createObjectURL(audioFile);
+                
+                pdf.src = pdfUrl;
+                audio.src = audioUrl;
+                
+                status.innerText = "Caricato: " + pdfFile.name.replace(".pdf", "");
+                audio.play();
+            } else {
+                alert("Attenzione: devi selezionare contemporaneamente sia il file PDF che il file AUDIO!");
+            }
+        });
+
+        function toggleLoop() {
+            isLooping = !isLooping;
+            loopBtn.classList.toggle('active');
+            loopBtn.innerText = isLooping ? "Loop: ATTIVO" : "Loop: OFF";
+        }
+
+        function changeSpeed(val) {
+            audio.playbackRate = parseFloat(val);
+        }
+
+        audio.ontimeupdate = function() {
+            if (isLooping) {
+                let start = parseFloat(document.getElementById('loopStart').value);
+                let end = parseFloat(document.getElementById('loopEnd').value);
+                if (audio.currentTime >= end) {
+                    audio.currentTime = start;
+                }
+            }
+        };
+    </script>
+</body>
+</html>

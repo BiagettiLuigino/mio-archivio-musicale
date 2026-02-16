@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>Music Practice Station</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; background: #1a1a1a; color: white; display: flex; height: 100vh; }
+        
+        /* Sidebar */
+        #sidebar { width: 300px; background: #252525; border-right: 2px solid #00d4ff; display: flex; flex-direction: column; padding: 15px; }
+        #songList { flex: 1; overflow-y: auto; list-style: none; padding: 0; }
+        #songList li { padding: 10px; border-bottom: 1px solid #333; cursor: pointer; border-radius: 4px; margin-bottom: 2px; }
+        #songList li:hover { background: #333; color: #00d4ff; }
+        #songList li.active { background: #007bff; color: white; }
+
+        /* Area Principale */
+        #main { flex: 1; display: flex; flex-direction: column; }
+        #pdf-view { flex: 1; border: none; background: #444; }
+
+        /* Player in basso */
+        #player-bar { background: #222; padding: 15px; border-top: 2px solid #00d4ff; text-align: center; }
+        audio { width: 100%; max-width: 600px; margin-bottom: 10px; }
+        .loop-controls { display: flex; justify-content: center; gap: 10px; align-items: center; }
+        input { width: 60px; padding: 5px; border-radius: 4px; border: 1px solid #555; background: #000; color: #00d4ff; text-align: center; }
+        #loopBtn { padding: 8px 15px; cursor: pointer; border: none; border-radius: 4px; background: #444; color: white; font-weight: bold; }
+        #loopBtn.active { background: #ff4444; }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h2 style="color:#00d4ff; text-align:center;">I MIEI CANTI</h2>
+        <ul id="songList"></ul>
+    </div>
+
+    <div id="main">
+        <iframe id="pdf-view" src=""></iframe>
+        <div id="player-bar">
+            <audio id="audioPlayer" controls></audio>
+            <div class="loop-controls">
+                <label>Inizio: <input type="number" id="start" value="0" step="1"></label>
+                <label>Fine: <input type="number" id="end" value="30" step="1"></label>
+                <button id="loopBtn" onclick="toggleLoop()">LOOP: OFF</button>
+            </div>
+            <div id="status" style="margin-top:10px; font-size:14px; color:#888;">Seleziona una canzone</div>
+        </div>
+    </div>
+
+    <script>
+        // --- LA TUA LISTA ---
+        // Attenzione: ogni riga deve avere le virgolette e la VIRGOLA alla fine, tranne l'ultima.
+        const listaFile = [
+            "Lascia i tuoi pesi.mp3",
+            "Mano potente.mp3",
+            "Santo Gen come fuoco vivo.mp3",
+            "Stai con me - Luce RnS 2015.mp3",
+            "Astro del ciel in SOL.mpeg",
+            "E' nato dio per noi.mpeg",
+            "Gloria Mariano.mpeg",
+            "il seme del tuo campo.mpeg",
+            "Santo MJ.mpeg",
+            "Sono qui a lodarti.mpeg"
+        ];
+
+        const audio = document.getElementById('audioPlayer');
+        const pdf = document.getElementById('pdf-view');
+        const list = document.getElementById('songList');
+        let isLooping = false;
+
+        // Funzione per creare la lista a sinistra
+        function creaLista() {
+            try {
+                listaFile.forEach(nome => {
+                    let li = document.createElement('li');
+                    // Mostra il nome senza .mp3 o .mpeg
+                    li.innerText = nome.replace(".mp3", "").replace(".mpeg", "");
+                    li.onclick = function() {
+                        // Rimuovi colore da altri
+                        document.querySelectorAll('li').forEach(el => el.classList.remove('active'));
+                        this.classList.add('active');
+                        carica(nome);
+                    };
+                    list.appendChild(li);
+                });
+            } catch (e) {
+                alert("Errore nel caricamento della lista: " + e);
+            }
+        }
+
+        // Funzione per caricare i file
+        function carica(nomeFile) {
+            const base = nomeFile.replace(".mp3", "").replace(".mpeg", "");
+            
+            // Carica audio e PDF (usando encodeURI
