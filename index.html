@@ -15,11 +15,11 @@
         #playlist li:hover { background: #252525; }
         #playlist li.active { background: #005bb5; color: white; font-weight: bold; border-radius: 4px; }
 
-        /* Area PDF - Ottimizzata per Tablet */
-        #main-viewer { flex-grow: 1; background: #333; position: relative; overflow: hidden; display: flex; }
+        /* Area PDF */
+        #main-viewer { flex-grow: 1; background: #333; position: relative; overflow: hidden; display: flex; flex-direction: column; }
         
-        /* Usiamo OBJECT invece di IFRAME per maggiore compatibilità tablet */
-        .pdf-display { width: 100%; height: 100%; border: none; }
+        /* Il trucco: usiamo l'anteprima di Google che è l'unica che non "scappa" su tablet */
+        #pdf-iframe { width: 100%; height: 100%; border: none; background: white; }
 
         /* Controlli */
         .controls { background: #181818; padding: 15px; border-top: 1px solid #444; border-radius: 8px; }
@@ -29,10 +29,8 @@
         #loopBtn { width: 100%; padding: 10px; border: none; border-radius: 4px; cursor: pointer; background: #444; color: white; font-weight: bold; }
         #loopBtn.active { background: #d32f2f; }
 
-        /* Correzione per schermi piccoli (Smartphone in verticale) */
         @media (max-width: 768px) {
-            body { flex-direction: column; }
-            #sidebar { width: 100%; height: 35%; border-right: none; border-bottom: 2px solid var(--primary); }
+            #sidebar { width: 250px; min-width: 250px; }
         }
     </style>
 </head>
@@ -52,21 +50,15 @@
         </div>
     </div>
 
-    <div id="main-viewer" id="pdf-box">
-        <object id="pdf-obj" data="" type="application/pdf" class="pdf-display">
-            <div style="padding:20px; text-align:center;">
-                <p>Il tuo dispositivo richiede l'apertura manuale:</p>
-                <a id="fallback-link" href="#" target="_blank" style="color:var(--primary); font-weight:bold; font-size:1.2rem;">APRI SPARTITO PDF</a>
-            </div>
-        </object>
+    <div id="main-viewer">
+        <iframe id="pdf-iframe" src=""></iframe>
     </div>
 
     <script>
         const UTENTE = "BiagettiLuigino";
         const REPO = "mio-archivio-musicale";
         const player = document.getElementById('player');
-        const pdfObj = document.getElementById('pdf-obj');
-        const fallbackLink = document.getElementById('fallback-link');
+        const pdfIframe = document.getElementById('pdf-iframe');
         let isLooping = false;
 
         async function init() {
@@ -85,12 +77,12 @@
                         document.querySelectorAll('li').forEach(l => l.classList.remove('active'));
                         li.classList.add('active');
                         
+                        // URL del PDF pubblico su GitHub Pages
                         const pdfUrl = `https://${UTENTE}.github.io/${REPO}/${encodeURIComponent(baseName)}.pdf`;
                         
-                        // AGGIORNAMENTO PDF PER TABLET
-                        // Ricarichiamo l'oggetto per forzare il browser a ridisegnare
-                        pdfObj.data = pdfUrl;
-                        fallbackLink.href = pdfUrl;
+                        // FORZATURA PER TABLET: Usiamo il visualizzatore incorporato di Google
+                        // Questo "incastra" il PDF dentro il tuo sito senza farlo scappare
+                        pdfIframe.src = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
 
                         // AUDIO
                         player.src = encodeURI(file.name);
