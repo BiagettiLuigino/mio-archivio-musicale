@@ -2,141 +2,72 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>Music Studio - Smart Playlist</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Archivio Musicale Biagetti</title>
+    <script src="database.js"></script>
     <style>
-        * { box-sizing: border-box; }
-        body { margin: 0; background: #121212; color: white; font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; overflow: hidden; }
+        :root { --blue: #00d4ff; --dark: #121212; --panel: #1e1e1e; }
+        body { margin: 0; background: var(--dark); color: white; font-family: sans-serif; display: flex; height: 100vh; overflow: hidden; }
         
-        /* Sidebar */
-        #sidebar { width: 320px; min-width: 320px; background: #1e1e1e; border-right: 2px solid #00d4ff; display: flex; flex-direction: column; padding: 15px; }
-        
-        .upload-btn { background: #00d4ff; color: black; padding: 12px; border-radius: 8px; text-align: center; cursor: pointer; font-weight: bold; margin-bottom: 15px; }
-        
-        #search { width: 100%; padding: 8px; background: #333; border: 1px solid #444; color: white; border-radius: 4px; margin-bottom: 10px; }
-
-        #playlist { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; border-top: 1px solid #333; }
-        #playlist li { padding: 10px; border-bottom: 1px solid #2a2a2a; cursor: pointer; font-size: 0.85rem; transition: 0.2s; }
-        #playlist li:hover { background: #333; color: #00d4ff; }
+        #sidebar { width: 300px; background: var(--panel); border-right: 2px solid var(--blue); display: flex; flex-direction: column; padding: 15px; }
+        #playlist { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
+        #playlist li { padding: 12px; border-bottom: 1px solid #333; cursor: pointer; font-size: 0.9rem; }
+        #playlist li:hover { background: #333; color: var(--blue); }
         #playlist li.active { background: #005bb5; color: white; font-weight: bold; }
 
-        /* Viewer */
-        #main-viewer { flex-grow: 1; background: #2c2c2c; }
+        #main { flex: 1; background: #2c2c2c; }
         iframe { width: 100%; height: 100%; border: none; }
 
-        /* Controls Area (in Sidebar) */
-        .controls { background: #2a2a2a; padding: 15px; border-radius: 8px; margin-top: 15px; }
-        audio { width: 100%; margin-bottom: 10px; }
-        .loop-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.8rem; }
-        input[type="number"] { width: 60px; background: #121212; color: #00d4ff; border: 1px solid #444; text-align: center; padding: 4px; }
-        #loopBtn { width: 100%; padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; background: #444; color: white; }
-        #loopBtn.active { background: #d32f2f; }
+        .player-bar { background: #181818; padding: 15px; border-top: 1px solid #444; }
+        audio { width: 100%; }
     </style>
 </head>
 <body>
 
     <div id="sidebar">
-        <h2>STUDIO STATION</h2>
-        
-        <label class="upload-btn">
-            CARICA TUTTA LA CARTELLA
-            <input type="file" id="folderInput" webkitdirectory directory multiple style="display:none">
-        </label>
-        
-        <input type="text" id="search" placeholder="Cerca nella playlist..." onkeyup="filterList()">
-
-        <ul id="playlist">
-            <li style="color: #666; font-style: italic;">Carica i file per vedere la lista...</li>
-        </ul>
-
-        <div class="controls">
+        <h2 style="color:var(--blue); text-align:center;">I MIEI CANTI</h2>
+        <ul id="playlist"></ul>
+        <div class="player-bar">
             <audio id="player" controls></audio>
-            <div class="loop-row">
-                <span>Inizio (s)</span>
-                <input type="number" id="start" value="0" step="0.5">
-            </div>
-            <div class="loop-row">
-                <span>Fine (s)</span>
-                <input type="number" id="end" value="30" step="0.5">
-            </div>
-            <button id="loopBtn" onclick="toggleLoop()">Loop: OFF</button>
         </div>
     </div>
 
-    <div id="main-viewer">
-        <iframe id="pdfViewer" src="about:blank"></iframe>
+    <div id="main">
+        <iframe id="pdfViewer"></iframe>
     </div>
 
     <script>
-        const folderInput = document.getElementById('folderInput');
-        const playlistElem = document.getElementById('playlist');
-        const player = document.getElementById('player');
-        const pdfViewer = document.getElementById('pdfViewer');
-        
-        let filesMap = {}; // Qui salviamo i riferimenti ai file
-        let isLooping = false;
-
-        folderInput.addEventListener('change', function(e) {
-            const files = e.target.files;
-            filesMap = {};
-            playlistElem.innerHTML = "";
-
-            // Organizza i file: associa nomi a oggetti file
-            for (let file of files) {
-                const ext = file.name.split('.').pop().toLowerCase();
-                const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
-
-                if (!filesMap[nameWithoutExt]) filesMap[nameWithoutExt] = {};
-                
-                if (ext === "pdf") filesMap[nameWithoutExt].pdf = file;
-                if (ext === "mp3" || ext === "mpeg") filesMap[nameWithoutExt].audio = file;
-            }
-
-            // Crea la lista visibile
-            Object.keys(filesMap).sort().forEach(name => {
-                if (filesMap[name].audio) { // Mostra solo se c'è almeno l'audio
-                    const li = document.createElement('li');
-                    li.innerText = name;
-                    li.onclick = () => loadTrack(name, li);
-                    playlistElem.appendChild(li);
-                }
-            });
-        });
-
-        function loadTrack(name, element) {
-            const data = filesMap[name];
+        // Questa funzione gira non appena la pagina è pronta
+        window.onload = function() {
+            const list = document.getElementById('playlist');
             
-            // Rimuovi selezione precedente
-            document.querySelectorAll('#playlist li').forEach(el => el.classList.remove('active'));
-            element.classList.add('active');
-
-            if (data.audio) player.src = URL.createObjectURL(data.audio);
-            if (data.pdf) pdfViewer.src = URL.createObjectURL(data.pdf);
-            else pdfViewer.src = "about:blank";
-
-            player.play();
-        }
-
-        function toggleLoop() {
-            isLooping = !isLooping;
-            const btn = document.getElementById('loopBtn');
-            btn.classList.toggle('active');
-            btn.innerText = isLooping ? "Loop: ATTIVO" : "Loop: OFF";
-        }
-
-        player.ontimeupdate = () => {
-            if (isLooping) {
-                const s = parseFloat(document.getElementById('start').value);
-                const e = parseFloat(document.getElementById('end').value);
-                if (player.currentTime >= e) player.currentTime = s;
+            // Controlla se il database.js è stato caricato correttamente
+            if (typeof listaFile !== 'undefined') {
+                listaFile.sort().forEach(nomeFile => {
+                    let li = document.createElement('li');
+                    // Mostra il nome senza estensione e senza trattini bassi
+                    li.innerText = nomeFile.replace(/\.(mp3|mpeg)$/i, "").replace(/_/g, " ");
+                    li.onclick = () => carica(nomeFile, li);
+                    list.appendChild(li);
+                });
+            } else {
+                alert("Errore: Non trovo la lista nel file database.js");
             }
         };
 
-        function filterList() {
-            const val = document.getElementById('search').value.toLowerCase();
-            const items = playlistElem.getElementsByTagName('li');
-            for (let item of items) {
-                item.style.display = item.innerText.toLowerCase().includes(val) ? "" : "none";
-            }
+        function carica(nomeFile, elemento) {
+            const player = document.getElementById('player');
+            const pdf = document.getElementById('pdfViewer');
+            const nomeBase = nomeFile.replace(/\.(mp3|mpeg)$/i, "");
+
+            // Rimuove la selezione dagli altri
+            document.querySelectorAll('li').forEach(el => el.classList.remove('active'));
+            elemento.classList.add('active');
+
+            // Carica i file da GitHub (sono nella stessa cartella)
+            player.src = encodeURI(nomeFile);
+            pdf.src = encodeURI(nomeBase + ".pdf");
+            player.play();
         }
     </script>
 </body>
